@@ -1,6 +1,5 @@
 import os
 from models.codeToPseudo.model_inference import *
-import numpy as np
 from models.pseudoToCode.model_inference import *
 from models.pseudoToCode.model_architecture import Transformer
 import tensorflow_datasets as tfds

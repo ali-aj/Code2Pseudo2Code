@@ -1,7 +1,4 @@
 import os
-import tensorflow as tf
-from tensorflow import keras
-import numpy as np
 from models.codeToPseudo.model_inference import *
 import tensorflow_datasets as tfds
 from models.codeToPseudo.model_architecture import Transformer
