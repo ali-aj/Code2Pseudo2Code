@@ -27,7 +27,7 @@ class PseudoToCode:
                 self.input_tokenizer, self.output_tokenizer = self.load_tokenizer()
                 self.model = self.load_model()
             except subprocess.CalledProcessError as e:
-                st.error(f"Error pulling Git LFS files: {e}")
+                st.error(f"Error pulling Git LFS files for PseudoCode to Code: {e}")
                 self.input_tokenizer, self.output_tokenizer = None, None
                 self.model = None
         else:
