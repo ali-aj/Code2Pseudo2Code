@@ -1,26 +1,38 @@
 import os
-from models.codeToPseudo.model_inference import *
 from models.pseudoToCode.model_inference import *
 from models.pseudoToCode.model_architecture import Transformer
-import tensorflow_datasets as tfds
+import pickle
+import subprocess
+import streamlit as st
 
 class PseudoToCode:
     def __init__(self):
+        self.MAX_LENGTH = 64
+        self.D_MODEL = 512
+        self.N_LAYERS = 4
+        self.FFN_UNITS = 512
+        self.N_HEADS = 8
+        self.DROPOUT_RATE = 0.1
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
         self.model_weights_path = os.path.join(current_dir, 'pseudoToCode', 'pseudoToCode.weights.h5')
         self.tokenizer_inputs_path = os.path.join(current_dir, 'pseudoToCode', 'tokenizer_inputs.pkl')
         self.tokenizer_outputs_path = os.path.join(current_dir, 'pseudoToCode', 'tokenizer_outputs.pkl')
-        
-        self.input_tokenizer, self.output_tokenizer = self.load_tokenizer()
-        self.model = self.load_model()
 
-        self.D_MODEL = 512 # 512
-        self.N_LAYERS = 4 # 6
-        self.FFN_UNITS = 512 # 2048
-        self.N_HEADS = 8 # 8
-        self.DROPOUT_RATE = 0.1 # 0.1
-        self.MAX_LENGTH = 15  # Adding max length for sequences
+        # Ensure Git LFS files are pulled
+        if not os.path.exists(self.model_weights_path):
+            try:
+                subprocess.run(["git", "lfs", "pull"], check=True)
+                self.input_tokenizer, self.output_tokenizer = self.load_tokenizer()
+                self.model = self.load_model()
+            except subprocess.CalledProcessError as e:
+                st.error(f"Error pulling Git LFS files: {e}")
+                self.input_tokenizer, self.output_tokenizer = None, None
+                self.model = None
+        else:
+            self.input_tokenizer, self.output_tokenizer = self.load_tokenizer()
+            self.model = self.load_model()
 
     def load_model(self):
         try:
@@ -38,6 +50,14 @@ class PseudoToCode:
                 dropout_rate=self.DROPOUT_RATE
             )
 
+            # Dummy input to build the model
+            dummy_enc_input = tf.ones((1, self.MAX_LENGTH), dtype=tf.int32)
+            dummy_dec_input = tf.ones((1, self.MAX_LENGTH), dtype=tf.int32)
+            transformer(dummy_enc_input, dummy_dec_input, training=False)
+
+            # Load weights
+            transformer.load_weights(self.model_weights_path)
+
             return transformer
         except Exception as e:
             print(f"Error loading model: {e}")
@@ -46,12 +66,11 @@ class PseudoToCode:
     def load_tokenizer(self):
         try:
             # Load tokenizers
-            tokenizer_inputs = tfds.deprecated.text.SubwordTextEncoder.load_from_file(
-                self.tokenizer_inputs_path
-            )
-            tokenizer_outputs = tfds.deprecated.text.SubwordTextEncoder.load_from_file(
-                self.tokenizer_outputs_path
-            )
+            with open(self.tokenizer_inputs_path, "rb") as f:
+                tokenizer_inputs = pickle.load(f)
+
+            with open(self.tokenizer_outputs_path, "rb") as f:
+                tokenizer_outputs = pickle.load(f)
             return tokenizer_inputs, tokenizer_outputs
         except Exception as e:
             print(f"Error loading tokenizers: {e}")
@@ -60,7 +79,7 @@ class PseudoToCode:
     def generate_code(self, pseudocode):
         try:
             # Generate the C++ code
-            predictions = translate(self.model, pseudocode, self.input_tokenizer, self.output_tokenizer)
+            predictions = translate(self.model, pseudocode, self.input_tokenizer, self.output_tokenizer, self.MAX_LENGTH)
             return predictions
         except Exception as e:
             print(f"Error generating code: {e}")

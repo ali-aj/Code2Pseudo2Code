@@ -27,7 +27,7 @@ def predict(transformer, inp_sentence, tokenizer_in, tokenizer_out, sos_token_in
     return tf.squeeze(output, axis=0)
 
 # Update the translate function to use the model and tokens provided
-def translate(model, sentence, tokenizer_in, tokenizer_out, device=None):
+def translate(model, sentence, tokenizer_in, tokenizer_out, MAX_LENGTH, device=None):
     # Recalculate tokens
     num_words_inputs = tokenizer_in.vocab_size + 2
     sos_token_input = [num_words_inputs - 2]
